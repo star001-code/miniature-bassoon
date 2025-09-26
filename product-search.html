@@ -1,21 +1,66 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-<head><meta charset="utf-8"><title>🔎 الحاسبة</title></head>
+<head>
+<meta charset="utf-8">
+<title>🔎 الحاسبة</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{font-family:"Segoe UI","Noto Naskh Arabic",sans-serif;background:#0f172a;color:#e5e7eb;margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.card{background:#111827;padding:20px;border-radius:14px;max-width:400px;width:100%;box-shadow:0 4px 10px rgba(0,0,0,0.4)}
+h1{text-align:center;color:#60a5fa}
+label{display:block;margin:10px 0 4px}
+input{width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#e5e7eb}
+button{width:100%;padding:12px;margin-top:12px;border:none;border-radius:8px;background:#ef4444;color:white;cursor:pointer;font-size:16px}
+button:hover{background:#f87171}
+.result{margin-top:12px;padding:12px;border-radius:10px;background:#064e3b;color:#d1fae5}
+</style>
+</head>
 <body>
-<h1>🔎 الحاسبة</h1>
-<input id="q" placeholder="ابحث باسم أو IDE">
-<br>وزن (كغ):<input id="w" type="number"><br>
-سعر الصرف:<input id="ex" type="number" value="1320"><br>
-النسبة %:<input id="rt" type="number" value="6"><br>
-<button onclick="calc()">احسب</button>
-<div id="out"></div>
+<div class="card">
+  <h1>🔎 الحاسبة</h1>
+  <label>ابحث بالاسم أو IDE</label>
+  <input id="q" type="text">
+
+  <label>وزن (كغ)</label>
+  <input id="w" type="number">
+
+  <label>سعر الصرف</label>
+  <input id="ex" type="number" value="1320">
+
+  <label>النسبة %</label>
+  <input id="rt" type="number" value="6">
+
+  <button onclick="calc()">احسب</button>
+  <div id="out" class="result" hidden></div>
+</div>
+
 <script>
-let DB=[];const $=s=>document.querySelector(s);
+let DB=[];
+const $=s=>document.querySelector(s);
 function fmt(x){const n=Number(x);return isFinite(n)?n.toLocaleString('ar-IQ',{maximumFractionDigits:2}):'-';}
 function prep(a){return a.map(r=>({product:r.product||r.GDS_DS2,IDE:r.IDE_HSC_NB1||r.IDE,GDS_MIN:+r.GDS_MIN,GDS_MAX:+r.GDS_MAX,GDS_YER:r.GDS_YER?+r.GDS_YER:(+r.GDS_MIN+ +r.GDS_MAX)/2}));}
 function find(q){q=q.toLowerCase();return DB.find(r=>r.product.toLowerCase().includes(q)||(r.IDE||'').toLowerCase().includes(q));}
-function calc(){const rec=find($("#q").value);if(!rec){alert("غير موجود");return;}const w=+$("#w").value,ex=+$("#ex").value,rt=+$("#rt").value;const d=w*rec.GDS_YER*ex*(rt/100);$("#out").innerHTML=`<b>${rec.product}</b> IDE:${rec.IDE||"-"}<br>YER=${fmt(rec.GDS_YER)}<br>فرق الرسم=<b>${fmt(d)}</b> دينار`;}
-fetch('products.json').then(r=>r.json()).then(js=>{DB=prep(js);const p=new URLSearchParams(location.search);const q=p.get('name')||p.get('ide');if(q)$("#q").value=q;});
+function show(rec,w,ex,rt){
+  const diff=w*rec.GDS_YER*ex*(rt/100);
+  const out=$("#out");out.hidden=false;
+  out.innerHTML=`
+    <div><b>${rec.product}</b> (IDE: ${rec.IDE||"-"})</div>
+    <div>GDS_YER: ${fmt(rec.GDS_YER)}</div>
+    <div>فرق الرسم: <b>${fmt(diff)}</b> دينار</div>`;
+}
+function calc(){
+  const rec=find($("#q").value);
+  if(!rec){alert("⚠️ غير موجود");return;}
+  const w=+$("#w").value,ex=+$("#ex").value,rt=+$("#rt").value;
+  if(!w){alert("⚠️ أدخل وزن");return;}
+  show(rec,w,ex,rt);
+}
+(async()=>{
+  try{const res=await fetch('products.json');DB=prep(await res.json());}catch(e){}
+  const p=new URLSearchParams(location.search);
+  const q=p.get('name')||p.get('ide');
+  if(q){$("#q").value=q;const rec=find(q);if(rec){$("#out").hidden=false;$("#out").innerHTML=`<b>${rec.product}</b> (IDE:${rec.IDE||"-"}) جاهز للحساب`;}}
+})();
 </script>
 </body>
 </html>
