@@ -4,142 +4,70 @@
 <meta charset="utf-8">
 <title>🔎 الحاسبة الذكية للرسم الكمركي</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-  body{font-family:"Segoe UI","Noto Naskh Arabic",sans-serif;background:#0f172a;color:#e5e7eb;margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh}
-  .card{background:#111827;padding:20px;border-radius:14px;max-width:460px;width:100%;box-shadow:0 4px 10px rgba(0,0,0,0.4)}
-  h1{text-align:center;color:#60a5fa;margin-top:0}
-  label{display:block;margin:10px 0 4px}
-  input{width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#e5e7eb}
-  button{width:100%;padding:12px;margin-top:12px;border:none;border-radius:8px;background:#2563eb;color:white;cursor:pointer;font-size:16px}
-  button:hover{background:#3b82f6}
-  .result{margin-top:12px;padding:12px;border-radius:10px;background:#0b1220}
-  .kv{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid #1f2937}
-  .ok{background:#064e3b;color:#d1fae5}
-  .warn{color:#fca5a5;font-size:12px;margin-top:8px}
-</style>
 </head>
 <body>
-<div class="card">
-  <h1>📦 الحاسبة الذكية</h1>
+<h1>🔎 الحاسبة الذكية</h1>
 
-  <div id="pre" class="result" style="display:none"></div>
+<label>ابحث بالاسم أو IDE</label>
+<input id="q">
 
-  <label>🔎 ابحث بالاسم أو IDE</label>
-  <input id="q" type="text" placeholder="مثال: عجول / 1022910">
+<label>⚖️ الوزن الكلي (كغ)</label>
+<input id="w" type="number">
 
-  <label>⚖️ الوزن الكلي (كغ)</label>
-  <input id="w" type="number" placeholder="مثال: 5000">
+<label>💵 الرسم المدفوع بإبراهيم خليل (USD)</label>
+<input id="paid" type="number">
 
-  <label>💵 الرسم المدفوع بإبراهيم خليل (USD)</label>
-  <input id="paid" type="number" placeholder="مثال: 1200">
+<label>💰 قيمة الإيراد (GDS_YER)</label>
+<input id="yer" type="number">
 
-  <label>💰 قيمة الإيراد (GDS_YER) — قيمة الطن بالدولار</label>
-  <input id="yer" type="number" placeholder="من الجدول أو يُملأ تلقائيًا لو اخترت منتج">
+<label>🔢 سعر الصرف (دينار/دولار)</label>
+<input id="ex" type="number" value="1320">
 
-  <label>🔢 سعر الصرف (دينار/دولار)</label>
-  <input id="ex" type="number" value="1320">
+<label>🏷️ النسبة (%)</label>
+<input id="rt" type="number" value="6">
 
-  <label>🏷️ النسبة (%)</label>
-  <input id="rt" type="number" value="6" step="0.01">
-
-  <button id="calcBtn">احسب</button>
-
-  <div id="out" class="result ok" style="display:none"></div>
-  <div id="msg" class="warn"></div>
-</div>
+<button onclick="calc()">احسب</button>
+<div id="out"></div>
 
 <script>
 let DB=[], current=null;
 const $=s=>document.querySelector(s);
-const fmt=x=>{const n=Number(x);return isFinite(n)?n.toLocaleString('ar-IQ',{maximumFractionDigits:3}):'-';};
-function prep(a){
-  return a.map(r=>({
-    product: r.product||r.GDS_DS2,
-    IDE: (r.IDE_HSC_NB1||r.IDE)||null,
-    GDS_MIN: +r.GDS_MIN,
-    GDS_MAX: +r.GDS_MAX,
-    GDS_YER: r.GDS_YER ? +r.GDS_YER : (+r.GDS_MIN + +r.GDS_MAX)/2
-  })).filter(r=>r.product);
-}
-function findOne(q){
-  q=(q||'').toString().trim().toLowerCase();
-  return DB.find(r=> r.product.toLowerCase().includes(q) || ((r.IDE||'').toLowerCase().includes(q)) ) || null;
-}
 
-function showPre(rec){
-  $("#pre").style.display="";
-  $("#pre").innerHTML = `
-    <div class="kv"><div>🏷️ المنتج</div><div><b>${rec.product}</b></div></div>
-    <div class="kv"><div>IDE</div><div>${rec.IDE||"-"}</div></div>
-    <div class="kv"><div>GDS_MIN</div><div>${fmt(rec.GDS_MIN)}</div></div>
-    <div class="kv"><div>GDS_MAX</div><div>${fmt(rec.GDS_MAX)}</div></div>
-    <div class="kv"><div>💰 GDS_YER (قيمة الطن بالدولار)</div><div><b>${fmt(rec.GDS_YER)}</b></div></div>
-  `;
-  // نملأ GDS_YER تلقائياً من الجدول
-  $("#yer").value = rec.GDS_YER || "";
-  current = rec;
+function findOne(q){
+  q=q.toLowerCase();
+  return DB.find(r=>r.product.toLowerCase().includes(q)||(r.IDE||"").toLowerCase().includes(q));
 }
 
 function calc(){
-  const w   = parseFloat($("#w").value);
-  const paid= parseFloat($("#paid").value)||0;
-  const yer = parseFloat($("#yer").value);
-  const ex  = parseFloat($("#ex").value);
-  const rt  = parseFloat($("#rt").value);
+  const w=+$("#w").value;
+  const paid=+$("#paid").value;
+  const yer=+$("#yer").value;
+  const ex=+$("#ex").value;
+  const rt=+$("#rt").value;
 
-  if(!(w>0) || !(yer>0) || !(ex>0)){
-    $("#msg").textContent="⚠️ أدخل الوزن و GDS_YER وسعر الصرف بشكل صحيح.";
-    return;
-  }
-  $("#msg").textContent="";
-
-  // المعادلة المطلوبة:
-  // A = وزن × قيمة الإيرادات(GDS_YER) × (النسبة ÷ 100)
-  // B = الرسم المدفوع في إبراهيم خليل (USD)
-  // AB = A - B
-  // النهائي = AB × سعر الصرف
-  const A  = w * yer * (rt/100);
-  const B  = paid;
+  const A = w * yer * (rt/100);
+  const B = paid;
   const AB = A - B;
   const finalIQD = AB * ex;
 
-  $("#out").style.display="";
-  $("#out").innerHTML = `
-    <div class="kv"><div>🏷️ اسم المنتج</div><div>${current?current.product:($("#q").value||"-")}</div></div>
-    <div class="kv"><div>🔢 رقم التسريحة (IDE)</div><div>${current?(current.IDE||"-"):"-"}</div></div>
-    <div class="kv"><div>⚖️ الوزن الكلي (كغ)</div><div>${fmt(w)}</div></div>
-    <div class="kv"><div>💰 قيمة الطن (GDS_YER)</div><div>${fmt(yer)} USD</div></div>
-    <div class="kv"><div>🏷️ النسبة المستخدمة</div><div>${rt}%</div></div>
-    <div class="kv"><div>💵 B: رسم إبراهيم خليل</div><div>${fmt(B)} USD</div></div>
-    <div class="kv"><div>🧮 A = وزن × GDS_YER × النسبة</div><div>${fmt(A)} USD</div></div>
-    <div class="kv"><div>➖ AB = A - B</div><div>${fmt(AB)} USD</div></div>
-    <div class="kv"><div>✅ الرسم النهائي (دينار)</div><div><b>${fmt(finalIQD)}</b> IQD</div></div>
-  `;
+  $("#out").innerHTML=`
+    <p>🏷️ المنتج: ${current?current.product:$("#q").value}</p>
+    <p>IDE: ${current?current.IDE:"-"}</p>
+    <p>A = ${A.toFixed(2)} USD</p>
+    <p>B = ${B.toFixed(2)} USD</p>
+    <p>AB = ${AB.toFixed(2)} USD</p>
+    <p><b>✅ الرسم النهائي: ${finalIQD.toFixed(2)} دينار</b></p>`;
 }
 
-async function boot(){
+(async()=>{
   try{
-    const res=await fetch('products.json',{cache:'no-store'});
-    if(res.ok){ DB=prep(await res.json()); }
-  }catch(e){}
-
-  // التقاط ?name أو ?ide من الرابط
+    const res=await fetch("products.json");
+    DB=await res.json();
+  }catch{}
   const p=new URLSearchParams(location.search);
-  const q=p.get('name')||p.get('ide');
-  if(q){
-    $("#q").value = q;
-    const rec = findOne(q);
-    if(rec) showPre(rec);
-  }
-
-  // عند تغيير خانة البحث بالاسم/IDE، نحدّث المعاينة
-  $("#q").addEventListener('change', ()=>{
-    const rec = findOne($("#q").value);
-    if(rec) showPre(rec);
-  });
-  $("#calcBtn").addEventListener('click', calc);
-}
-boot();
+  const q=p.get("name")||p.get("ide");
+  if(q){$("#q").value=q; current=findOne(q); if(current){$("#yer").value=current.GDS_YER;}}
+})();
 </script>
 </body>
 </html>
