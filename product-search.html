@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><title>🔎 الحاسبة</title></head>
+<body>
+<h1>🔎 الحاسبة</h1>
+<input id="q" placeholder="ابحث باسم أو IDE">
+<br>وزن (كغ):<input id="w" type="number"><br>
+سعر الصرف:<input id="ex" type="number" value="1320"><br>
+النسبة %:<input id="rt" type="number" value="6"><br>
+<button onclick="calc()">احسب</button>
+<div id="out"></div>
+<script>
+let DB=[];const $=s=>document.querySelector(s);
+function fmt(x){const n=Number(x);return isFinite(n)?n.toLocaleString('ar-IQ',{maximumFractionDigits:2}):'-';}
+function prep(a){return a.map(r=>({product:r.product||r.GDS_DS2,IDE:r.IDE_HSC_NB1||r.IDE,GDS_MIN:+r.GDS_MIN,GDS_MAX:+r.GDS_MAX,GDS_YER:r.GDS_YER?+r.GDS_YER:(+r.GDS_MIN+ +r.GDS_MAX)/2}));}
+function find(q){q=q.toLowerCase();return DB.find(r=>r.product.toLowerCase().includes(q)||(r.IDE||'').toLowerCase().includes(q));}
+function calc(){const rec=find($("#q").value);if(!rec){alert("غير موجود");return;}const w=+$("#w").value,ex=+$("#ex").value,rt=+$("#rt").value;const d=w*rec.GDS_YER*ex*(rt/100);$("#out").innerHTML=`<b>${rec.product}</b> IDE:${rec.IDE||"-"}<br>YER=${fmt(rec.GDS_YER)}<br>فرق الرسم=<b>${fmt(d)}</b> دينار`;}
+fetch('products.json').then(r=>r.json()).then(js=>{DB=prep(js);const p=new URLSearchParams(location.search);const q=p.get('name')||p.get('ide');if(q)$("#q").value=q;});
+</script>
+</body>
+</html>
